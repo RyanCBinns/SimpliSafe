@@ -26,9 +26,9 @@ metadata {
 	definition (name: "SimpliSafe", namespace: "tobycth3", author: "Toby Harris") {
 		capability "Alarm"
 		capability "Polling"
-       // capability "Contact Sensor"
+        capability "Contact Sensor"
 		capability "Carbon Monoxide Detector"
-		capability "Presence Sensor"
+		//capability "Presence Sensor"
 		capability "Smoke Detector"
         capability "Temperature Measurement"
         capability "Water Sensor"
@@ -185,10 +185,19 @@ def poll() {
 	httpGet ([uri: getAPIUrl("refresh"), headers: state.auth.respAuthHeader, contentType: "application/json; charset=utf-8"]) { response ->
         
 		//Check alarm state
-		sendEvent(name: "alarm", value: response.data.subscription.location.system.alarmState)
-		sendEvent(name: "status", value: response.data.subscription.location.system.alarmState)
+		sendEvent(name: "alarm", value: response.data.subscription.location.system.alarmState.toLowerCase())
+		sendEvent(name: "status", value: response.data.subscription.location.system.alarmState.toLowerCase())
 		log.info "Alarm State1: $response.data.subscription.location.system.alarmState"
 		
+        //Set contact state
+		def alarm_state = device.currentValue("alarm")
+		def alarm_contactState = ['off':'open', 'home':'closed', 'away':'closed']
+		sendEvent(name: 'contact', value: alarm_contactState.getAt(alarm_state))
+        
+		//Set presence
+		//def alarm_presence = ['off':'present', 'home':'present', 'away':'not present']
+		//sendEvent(name: 'presence', value: alarm_presence.getAt(alarm_state))
+        
 		//Check temperature
 		if (response.data.subscription.location.system.temperature != null) {
 		sendEvent(name: "temperature", value: response.data.subscription.location.system.temperature, unit: "dF")
@@ -262,12 +271,6 @@ def poll() {
 			log.info "Events: ${response.data.events[0].messageBody}"
     }
 }	
-	
-	//Set presence
-	def alarm_state = device.currentValue("alarm")
-	def alarm_presence = ['OFF':'present', 'HOME':'present', 'AWAY':'not present']
-		sendEvent(name: 'presence', value: alarm_presence.getAt(alarm_state))
-	
 
     //log.info "Alarm State2: $response"
     //apiLogout()
